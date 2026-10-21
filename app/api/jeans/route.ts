@@ -1,7 +1,7 @@
 import { desc, eq, inArray } from "drizzle-orm";
-import { db, jeans, washLogs, wearLogs } from "@/db";
+import { db, jeans, photos, washLogs, wearLogs } from "@/db";
 import { json, parseBody, requireUser, route } from "@/lib/http";
-import { numericize, statsFor } from "@/lib/derive";
+import { coverFor, numericize, statsFor } from "@/lib/derive";
 import { jeanSchema } from "@/lib/validators";
 
 const toDb = (v: ReturnType<typeof jeanSchema.parse>) => ({
@@ -23,12 +23,13 @@ export const GET = route(async (req) => {
   if (status) rows = rows.filter((r) => r.status === status);
 
   const ids = rows.map((r) => r.id);
-  const [wears, washes] = ids.length
+  const [wears, washes, pics] = ids.length
     ? await Promise.all([
         db.select().from(wearLogs).where(inArray(wearLogs.jeanId, ids)),
         db.select().from(washLogs).where(inArray(washLogs.jeanId, ids)),
+        db.select().from(photos).where(inArray(photos.jeanId, ids)),
       ])
-    : [[], []];
+    : [[], [], []];
 
   const out = rows.map((j) => ({
     ...numericize(j, ["purchasePrice"]),
@@ -37,6 +38,7 @@ export const GET = route(async (req) => {
       wears.filter((w) => w.jeanId === j.id).map((w) => w.wornOn),
       washes.filter((w) => w.jeanId === j.id).map((w) => w.washedOn),
     ),
+    coverUrl: coverFor(pics.filter((p) => p.jeanId === j.id))?.url ?? null,
   }));
 
   const keyed: Record<string, (a: (typeof out)[number], b: (typeof out)[number]) => number> = {

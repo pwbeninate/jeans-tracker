@@ -8,6 +8,13 @@
       "when": 1792542722320,
       "tag": "0000_mysterious_ink",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792595888459,
+      "tag": "0001_white_the_hand",
+      "breakpoints": true
     }
   ]
 }

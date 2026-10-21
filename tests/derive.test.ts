@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ageOf, deltaFromOriginal, statsFor } from "@/lib/derive";
+import { ageOf, coverFor, deltaFromOriginal, statsFor } from "@/lib/derive";
 
 const jean = {
   purchasePrice: "120.00",
@@ -50,5 +50,25 @@ describe("deltaFromOriginal", () => {
   });
   it("is null when only the original exists", () => {
     expect(deltaFromOriginal(base, base)).toBeNull();
+  });
+});
+
+describe("coverFor", () => {
+  const at = (takenOn: string, isCover = false, created = "2025-01-01T00:00:00Z") =>
+    ({ takenOn, isCover, createdAt: new Date(created) });
+  it("prefers the chosen cover", () => {
+    const cover = at("2024-01-01", true);
+    expect(coverFor([at("2025-06-01"), cover])).toBe(cover);
+  });
+  it("falls back to the most recent photo", () => {
+    const newest = at("2025-06-01");
+    expect(coverFor([at("2024-01-01"), newest, at("2025-01-01")])).toBe(newest);
+  });
+  it("breaks same-day ties by upload time", () => {
+    const later = at("2025-06-01", false, "2025-06-01T12:00:00Z");
+    expect(coverFor([at("2025-06-01"), later])).toBe(later);
+  });
+  it("is null without photos", () => {
+    expect(coverFor([])).toBeNull();
   });
 });

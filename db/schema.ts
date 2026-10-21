@@ -112,3 +112,27 @@ export const wearLogs = pgTable(
   },
   (t) => [index("wear_logs_jean_idx").on(t.jeanId)],
 );
+
+export const photos = pgTable(
+  "photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jeanId: uuid("jean_id")
+      .notNull()
+      .references(() => jeans.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    pathname: text("pathname").notNull(),
+    takenOn: date("taken_on", { mode: "string" }).notNull(),
+    caption: text("caption"),
+    isCover: boolean("is_cover").notNull().default(false),
+    width: integer("width"),
+    height: integer("height"),
+    ...timestamps,
+  },
+  (t) => [
+    index("photos_jean_idx").on(t.jeanId),
+    uniqueIndex("photos_one_cover")
+      .on(t.jeanId)
+      .where(sql`${t.isCover}`),
+  ],
+);

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { MeasurementChart } from "@/components/measurement-chart";
+import { PhotoUpload } from "@/components/photo-upload";
 import { api, ApiError, fetcher, money, today } from "@/lib/client";
 import { DIMENSIONS } from "@/lib/validators";
 
@@ -16,8 +17,10 @@ type Detail = {
   wearsSinceWash: number; lastWorn: string | null; lastWashed: string | null;
   costPerWear: number | null;
   shrinkage: Record<string, number | null> | null;
+  coverUrl: string | null; photoCount: number;
 };
 type M = { id: string; measuredOn: string; isOriginal: boolean; notes: string | null } & Record<string, unknown>;
+type Photo = { id: string; url: string; takenOn: string; caption: string | null; isCover: boolean };
 type Log = { id: string; notes: string | null; method?: string | null; wornOn?: string; washedOn?: string };
 
 const LABEL: Record<string, string> = {
@@ -28,7 +31,7 @@ const LABEL: Record<string, string> = {
 export default function JeanDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [tab, setTab] = useState<"measurements" | "washes" | "wears">("measurements");
+  const [tab, setTab] = useState<"measurements" | "washes" | "wears" | "photos">("measurements");
   const { data: jean, error, mutate } = useSWR<Detail>(`/api/jeans/${id}`, fetcher);
 
   if (error) return <p className="text-danger">Not found. <Link className="underline" href="/">Back</Link></p>;
@@ -45,13 +48,21 @@ export default function JeanDetailPage() {
     <>
       <Link href="/" className="text-sm text-muted">← Collection</Link>
       <div className="mb-4 mt-2 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted">{jean.brand}</p>
-          <h1 className="text-2xl font-semibold">{jean.name} <span className="badge align-middle">{jean.tagSize}</span></h1>
-          <p className="text-sm text-muted">
-            {[jean.fit, jean.color, jean.status !== "active" && jean.status, jean.purchasedUsed && "bought used"]
-              .filter(Boolean).join(" · ")}
-          </p>
+        <div className="flex items-start gap-4">
+          {jean.coverUrl && (
+            <button onClick={() => setTab("photos")} aria-label="View photos" className="shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={jean.coverUrl} alt="" className="h-24 w-18 rounded-lg border border-border object-cover" />
+            </button>
+          )}
+          <div>
+            <p className="text-sm text-muted">{jean.brand}</p>
+            <h1 className="text-2xl font-semibold">{jean.name} <span className="badge align-middle">{jean.tagSize}</span></h1>
+            <p className="text-sm text-muted">
+              {[jean.fit, jean.color, jean.status !== "active" && jean.status, jean.purchasedUsed && "bought used"]
+                .filter(Boolean).join(" · ")}
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Link className="btn" href={`/jeans/${id}/edit`}>Edit</Link>
@@ -74,7 +85,7 @@ export default function JeanDetailPage() {
       {jean.notes && <p className="card mb-4 whitespace-pre-wrap text-sm">{jean.notes}</p>}
 
       <div className="mb-3 flex gap-1 border-b border-border">
-        {(["measurements", "washes", "wears"] as const).map((t) => (
+        {(["measurements", "washes", "wears", "photos"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-3 py-2 text-sm capitalize ${tab === t ? "border-b-2 border-accent font-medium" : "text-muted"}`}>
             {t}
@@ -85,6 +96,7 @@ export default function JeanDetailPage() {
       {tab === "measurements" && <Measurements id={id} shrinkage={jean.shrinkage} onChange={mutate} />}
       {tab === "washes" && <LogTab id={id} kind="washes" onChange={mutate} />}
       {tab === "wears" && <LogTab id={id} kind="wears" onChange={mutate} />}
+      {tab === "photos" && <Photos id={id} onChange={mutate} />}
     </>
   );
 }
@@ -266,6 +278,89 @@ function LogTab({ id, kind, onChange }: { id: string; kind: "washes" | "wears"; 
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function Photos({ id, onChange }: { id: string; onChange: () => void }) {
+  const { data, mutate } = useSWR<Photo[]>(`/api/jeans/${id}/photos`, fetcher);
+  const [open, setOpen] = useState<number | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    if (open == null) dialog.current?.close();
+    else if (!dialog.current?.open) dialog.current?.showModal();
+  }, [open]);
+
+  function refresh() {
+    mutate();
+    onChange();
+  }
+  async function setCover(p: Photo) {
+    await api(`/api/photos/${p.id}`, { method: "PATCH", body: { isCover: true } });
+    refresh();
+  }
+  async function del(p: Photo) {
+    if (!confirm("Delete this photo?")) return;
+    await api(`/api/photos/${p.id}`, { method: "DELETE" });
+    setOpen(null);
+    refresh();
+  }
+
+  const current = open != null ? data?.[open] : undefined;
+  const step = (d: number) => data && setOpen((i) => (i == null ? i : (i + d + data.length) % data.length));
+
+  return (
+    <div className="flex flex-col gap-4">
+      <PhotoUpload jeanId={id} onUploaded={refresh} />
+      {data && data.length === 0 && <p className="text-sm text-muted">No photos yet.</p>}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {data?.map((p, i) => (
+          <figure key={p.id} className="card flex flex-col gap-2 !p-2">
+            <button onClick={() => setOpen(i)} aria-label={`Open photo from ${p.takenOn}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.url} alt={p.caption ?? ""} loading="lazy" className="aspect-[3/4] w-full rounded-lg object-cover" />
+            </button>
+            <figcaption className="flex items-center justify-between gap-2 text-sm">
+              <span>
+                <span className="font-medium">{p.takenOn}</span>
+                {p.isCover && <span className="badge ml-2">cover</span>}
+                {p.caption && <span className="block text-xs text-muted">{p.caption}</span>}
+              </span>
+              {!p.isCover && <button className="btn" onClick={() => setCover(p)}>Set cover</button>}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+
+      <dialog
+        ref={dialog}
+        onClose={() => setOpen(null)}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft") step(-1);
+          if (e.key === "ArrowRight") step(1);
+        }}
+        className="m-auto max-h-[95vh] max-w-[95vw] rounded-xl bg-surface p-3 text-foreground backdrop:bg-black/70"
+      >
+        {current && (
+          <div className="flex flex-col gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={current.url} alt={current.caption ?? ""} className="max-h-[80vh] w-auto rounded-lg object-contain" />
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span>
+                <span className="font-medium">{current.takenOn}</span>
+                {current.caption && <span className="ml-2 text-muted">{current.caption}</span>}
+              </span>
+              <div className="flex gap-2">
+                {data!.length > 1 && <button className="btn" onClick={() => step(-1)}>← Newer</button>}
+                {data!.length > 1 && <button className="btn" onClick={() => step(1)}>Older →</button>}
+                <button className="btn btn-danger" onClick={() => del(current)}>Delete</button>
+                <button className="btn" onClick={() => setOpen(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </dialog>
     </div>
   );
 }

@@ -18,6 +18,7 @@ type Jean = {
   wearsSinceWash: number;
   lastWorn: string | null;
   costPerWear: number | null;
+  coverUrl: string | null;
 };
 
 export default function CollectionPage() {
@@ -64,6 +65,10 @@ export default function CollectionPage() {
         {data?.map((j) => (
           <div key={j.id} className="card flex flex-col gap-3">
             <Link href={`/jeans/${j.id}`} className="block">
+              {j.coverUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={j.coverUrl} alt="" loading="lazy" className="mb-3 aspect-[4/3] w-full rounded-lg object-cover" />
+              )}
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs text-muted">{j.brand}</p>

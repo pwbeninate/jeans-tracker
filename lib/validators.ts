@@ -57,6 +57,21 @@ export const wearSchema = z.object({
 });
 export const wearPatchSchema = wearSchema.partial();
 
+const px = z.number().int().min(1).max(20000).nullish();
+export const photoSchema = z.object({
+  url: z.string().url().max(1000),
+  pathname: z.string().min(1).max(500),
+  takenOn: isoDate,
+  caption: optText,
+  width: px,
+  height: px,
+});
+export const photoPatchSchema = z.object({
+  takenOn: isoDate.optional(),
+  caption: optText,
+  isCover: z.literal(true).optional(),
+});
+
 export const DIMENSIONS = [
   "waist",
   "rise",

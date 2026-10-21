@@ -82,6 +82,22 @@ export function deltaFromOriginal(
   return out;
 }
 
+type PhotoLike = { isCover: boolean; takenOn: string; createdAt: Date };
+
+/** The chosen cover, else the most recent photo, else null. */
+export function coverFor<P extends PhotoLike>(photos: P[]): P | null {
+  return (
+    photos.find((p) => p.isCover) ??
+    photos.reduce<P | null>(
+      (a, p) =>
+        !a || p.takenOn > a.takenOn || (p.takenOn === a.takenOn && p.createdAt > a.createdAt)
+          ? p
+          : a,
+      null,
+    )
+  );
+}
+
 export function numericize<T extends Record<string, unknown>>(
   row: T,
   keys: readonly string[],
