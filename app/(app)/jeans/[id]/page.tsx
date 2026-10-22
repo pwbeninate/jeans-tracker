@@ -231,8 +231,13 @@ function LogTab({ id, kind, onChange }: { id: string; kind: "washes" | "wears"; 
     e.preventDefault();
     const form = e.currentTarget;
     const f = new FormData(form);
+    const date = String(f.get("date"));
+    if (kind === "wears" && data?.some((l) => l.wornOn === date)) {
+      const when = date === today() ? "today" : `on ${date}`;
+      if (!confirm(`You already logged a wear ${when}. Log another?`)) return;
+    }
     const body: Record<string, unknown> = {
-      [dateKey]: f.get("date"), notes: String(f.get("notes") || "") || null,
+      [dateKey]: date, notes: String(f.get("notes") || "") || null,
     };
     if (kind === "washes") body.method = String(f.get("method") || "") || null;
     await api(`/api/jeans/${id}/${kind}`, { method: "POST", body });

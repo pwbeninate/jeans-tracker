@@ -27,9 +27,13 @@ export default function CollectionPage() {
   const qs = new URLSearchParams({ sort, ...(status ? { status } : {}) });
   const { data, error, isLoading, mutate } = useSWR<Jean[]>(`/api/jeans?${qs}`, fetcher);
 
-  async function quickLog(id: string, kind: "wears" | "washes") {
+  async function quickLog(j: Jean, kind: "wears" | "washes") {
+    if (
+      kind === "wears" && j.lastWorn === today() &&
+      !confirm(`You already logged a wear for ${j.brand} ${j.name} today. Log another?`)
+    ) return;
     const body = kind === "wears" ? { wornOn: today() } : { washedOn: today() };
-    await api(`/api/jeans/${id}/${kind}`, { method: "POST", body });
+    await api(`/api/jeans/${j.id}/${kind}`, { method: "POST", body });
     mutate();
   }
 
@@ -88,8 +92,8 @@ export default function CollectionPage() {
             </Link>
             {j.status === "active" && (
               <div className="flex gap-2">
-                <button className="btn flex-1" onClick={() => quickLog(j.id, "wears")}>Wore today</button>
-                <button className="btn flex-1" onClick={() => quickLog(j.id, "washes")}>Washed today</button>
+                <button className="btn flex-1" onClick={() => quickLog(j, "wears")}>Wore today</button>
+                <button className="btn flex-1" onClick={() => quickLog(j, "washes")}>Washed today</button>
               </div>
             )}
           </div>
