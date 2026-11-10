@@ -1,6 +1,6 @@
 # Jeans Tracker
 
-Track a denim collection: purchase info, age, tag size, measurements over time (one marked original), a dated photo timeline (one marked cover), and wash/wear logs with starting counts for used or existing pairs. Multi-user, with a REST API and web UI.
+Track a denim collection: purchase info, age, tag size, measurements over time (one marked original), a dated photo timeline (one marked cover), and wash/wear logs with starting counts for used or existing pairs. Multi-user, with a REST API and web UI. The collection can be browsed as cards or as a sortable, filterable table (`/table`).
 
 Stack: Next.js 15 (App Router) + TypeScript, Neon Postgres, Drizzle ORM, Vercel Blob (photos), Auth.js (email + password), Tailwind, SWR, Recharts.
 
