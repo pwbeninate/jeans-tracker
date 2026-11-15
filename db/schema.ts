@@ -136,3 +136,10 @@ export const photos = pgTable(
       .where(sql`${t.isCover}`),
   ],
 );
+
+/** Fixed-window counters for lib/rate-limit.ts. */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(1),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+});

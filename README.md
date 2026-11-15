@@ -30,6 +30,6 @@ All routes need a session cookie and return JSON; errors are `{ error, details? 
 
 ## Deploy to Vercel
 1. Import the repo, then add Neon from the Marketplace (sets `DATABASE_URL`).
-2. Set `AUTH_SECRET`.
+2. Set `AUTH_SECRET`. Signup is closed unless `ALLOW_SIGNUP=true`: set it to create your account, then remove it.
 3. Storage → create a **public** Blob store and connect it to the project (sets `BLOB_READ_WRITE_TOKEN`). The Hobby plan includes 1 GB, and photos are resized to ~2000px JPEG in the browser before upload.
 4. Run `npm run db:migrate` against the production database before the first deploy and after schema changes.

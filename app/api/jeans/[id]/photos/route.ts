@@ -1,6 +1,7 @@
-import { desc, eq } from "drizzle-orm";
+import { head } from "@vercel/blob";
+import { count, desc, eq } from "drizzle-orm";
 import { db, photos } from "@/db";
-import { isOwnedBlob } from "@/lib/blob";
+import { isOwnedBlob, MAX_PHOTOS_PER_JEAN } from "@/lib/blob";
 import { HttpError, idParam, json, parseBody, requireUser, route, type IdCtx } from "@/lib/http";
 import { ownedJean } from "@/lib/queries";
 import { photoSchema } from "@/lib/validators";
@@ -23,14 +24,19 @@ export const POST = route<IdCtx>(async (req, ctx) => {
   if (!isOwnedBlob(jean.id, body.url, body.pathname)) {
     throw new HttpError(400, "Photo must be uploaded to this pair");
   }
-  const [existing] = await db
-    .select({ id: photos.id })
+  // head() uses our token, so it only finds blobs that are in this app's store.
+  const stored = await head(body.url).catch(() => null);
+  if (stored?.pathname !== body.pathname) {
+    throw new HttpError(400, "Photo must be uploaded to this pair");
+  }
+  const [{ n }] = await db
+    .select({ n: count() })
     .from(photos)
-    .where(eq(photos.jeanId, jean.id))
-    .limit(1);
+    .where(eq(photos.jeanId, jean.id));
+  if (n >= MAX_PHOTOS_PER_JEAN) throw new HttpError(400, "Photo limit reached for this pair");
   const [created] = await db
     .insert(photos)
-    .values({ ...body, jeanId: jean.id, isCover: !existing })
+    .values({ ...body, url: stored.url, jeanId: jean.id, isCover: n === 0 })
     .returning();
   return json(created, 201);
 });

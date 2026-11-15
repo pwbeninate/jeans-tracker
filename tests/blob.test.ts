@@ -24,3 +24,7 @@ describe("isOwnedBlob", () => {
     expect(isOwnedBlob(jean, "nope", path)).toBe(false);
   });
 });
+
+it("rejects a malformed percent-encoding instead of throwing", () => {
+  expect(isOwnedBlob(jean, "https://store.public.blob.vercel-storage.com/%E0%A4%A", path)).toBe(false);
+});

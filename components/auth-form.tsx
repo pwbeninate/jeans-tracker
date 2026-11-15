@@ -6,7 +6,7 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { api } from "@/lib/client";
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm({ mode, signupOpen }: { mode: "login" | "signup"; signupOpen: boolean }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,6 +26,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         });
       }
       const res = await signIn("credentials", { email, password, redirect: false });
+      if (res?.code === "rate_limited") throw new Error("Too many attempts. Try again in a few minutes.");
       if (res?.error) throw new Error("Invalid email or password");
       router.push("/");
       router.refresh();
@@ -63,7 +64,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </form>
       <p className="text-sm text-muted">
         {mode === "login" ? (
-          <>No account? <Link className="underline" href="/signup">Sign up</Link></>
+          signupOpen && <>No account? <Link className="underline" href="/signup">Sign up</Link></>
         ) : (
           <>Have an account? <Link className="underline" href="/login">Sign in</Link></>
         )}
