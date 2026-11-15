@@ -15,6 +15,13 @@
       "when": 1792595888459,
       "tag": "0001_white_the_hand",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794704880091,
+      "tag": "0002_rate_limits",
+      "breakpoints": true
     }
   ]
 }
