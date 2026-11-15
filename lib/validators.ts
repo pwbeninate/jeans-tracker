@@ -25,7 +25,14 @@ export const signupSchema = credentialsSchema.extend({
   name: z.string().trim().max(100).optional(),
 });
 
-export const jeanSchema = z.object({
+/**
+ * PATCH schemas are built from the default-free fields: a default on a partial
+ * schema would fill in every omitted field and overwrite what is stored.
+ */
+const patchOf = <T extends z.ZodObject>(fields: T) =>
+  fields.partial().refine((v) => Object.keys(v).length > 0, "No fields to update");
+
+const jeanFields = z.object({
   brand: z.string().trim().min(1).max(100),
   name: z.string().trim().min(1).max(100),
   fit: optText,
@@ -33,18 +40,24 @@ export const jeanSchema = z.object({
   tagSize: z.string().trim().min(1).max(20),
   purchasePrice: z.number().min(0).max(100000).nullish(),
   purchaseDate: isoDate.nullish(),
-  purchasedUsed: z.boolean().default(false),
-  initialWashCount: z.number().int().min(0).default(0),
-  initialWearCount: z.number().int().min(0).default(0),
-  status: z.enum(["active", "retired", "sold"]).default("active"),
+  purchasedUsed: z.boolean(),
+  initialWashCount: z.number().int().min(0),
+  initialWearCount: z.number().int().min(0),
+  status: z.enum(["active", "retired", "sold"]),
   retiredDate: isoDate.nullish(),
   notes: optText,
 });
-export const jeanPatchSchema = jeanSchema.partial();
+export const jeanSchema = jeanFields.extend({
+  purchasedUsed: jeanFields.shape.purchasedUsed.default(false),
+  initialWashCount: jeanFields.shape.initialWashCount.default(0),
+  initialWearCount: jeanFields.shape.initialWearCount.default(0),
+  status: jeanFields.shape.status.default("active"),
+});
+export const jeanPatchSchema = patchOf(jeanFields);
 
-export const measurementSchema = z.object({
+const measurementFields = z.object({
   measuredOn: isoDate,
-  isOriginal: z.boolean().default(false),
+  isOriginal: z.boolean(),
   waist: dim,
   rise: dim,
   inseam: dim,
@@ -54,20 +67,23 @@ export const measurementSchema = z.object({
   hip: dim,
   notes: optText,
 });
-export const measurementPatchSchema = measurementSchema.partial();
+export const measurementSchema = measurementFields.extend({
+  isOriginal: measurementFields.shape.isOriginal.default(false),
+});
+export const measurementPatchSchema = patchOf(measurementFields);
 
 export const washSchema = z.object({
   washedOn: isoDate,
   method: z.string().trim().max(100).nullish(),
   notes: optText,
 });
-export const washPatchSchema = washSchema.partial();
+export const washPatchSchema = patchOf(washSchema);
 
 export const wearSchema = z.object({
   wornOn: isoDate,
   notes: optText,
 });
-export const wearPatchSchema = wearSchema.partial();
+export const wearPatchSchema = patchOf(wearSchema);
 
 const px = z.number().int().min(1).max(20000).nullish();
 export const photoSchema = z.object({
