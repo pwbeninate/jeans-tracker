@@ -9,7 +9,19 @@ export const credentialsSchema = z.object({
   password: z.string().min(8).max(200),
 });
 
+// bcrypt only reads the first 72 bytes, so anything longer would be silently cut.
+const newPassword = z
+  .string()
+  .min(8)
+  .refine((p) => new TextEncoder().encode(p).length <= 72, "Use at most 72 bytes");
+
+export const passwordChangeSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword,
+});
+
 export const signupSchema = credentialsSchema.extend({
+  password: newPassword,
   name: z.string().trim().max(100).optional(),
 });
 

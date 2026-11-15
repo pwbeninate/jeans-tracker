@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </nav>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted">
-          <span className="hidden sm:inline">{session.user.email}</span>
+          <Link href="/account" className="hidden hover:text-foreground sm:inline">{session.user.email}</Link>
           <a className="btn" href="/api/export" download>Export CSV</a>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
             <button className="btn">Sign out</button>

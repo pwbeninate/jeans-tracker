@@ -24,6 +24,14 @@
     "swr": "^2.5.1",
     "zod": "^4.6.7"
   },
+  "overrides": {
+    "next": {
+      "postcss": "^8.5.31"
+    },
+    "@vercel/cli-config": {
+      "zod": "$zod"
+    }
+  },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.10",
     "@eslint/eslintrc": "^3",

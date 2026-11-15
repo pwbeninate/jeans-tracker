@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -11,6 +12,10 @@ import { credentialsSchema } from "@/lib/validators";
 const DUMMY_HASH = "$2b$10$akyfQnkByUP11W3yKYh1PeCEW4VbsLQ4wzh7I7fPS05yPdT.z6eEq";
 
 const WINDOW = 15 * 60;
+
+/** Stored in the session token; changes when the password does, which ends older sessions. */
+const fingerprint = (passwordHash: string) =>
+  createHash("sha256").update(passwordHash).digest("hex").slice(0, 16);
 
 class RateLimited extends CredentialsSignin {
   code = "rate_limited";
@@ -40,9 +45,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
-      if (user?.id) token.sub = user.id;
-      return token;
+    // Runs on every auth() call. Returning null ends the session, so a deleted
+    // account or a changed password takes effect on the next request.
+    async jwt({ token, user }) {
+      const id = user?.id ?? token.sub;
+      if (!id) return null;
+      const [row] = await db
+        .select({ passwordHash: users.passwordHash })
+        .from(users)
+        .where(eq(users.id, id));
+      if (!row) return null;
+      const pwf = fingerprint(row.passwordHash);
+      if (user) return { ...token, sub: id, pwf };
+      return token.pwf === pwf ? token : null;
     },
     session({ session, token }) {
       if (token.sub) session.user.id = token.sub;

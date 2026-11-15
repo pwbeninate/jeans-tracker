@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { jeanSchema, measurementSchema, photoPatchSchema, photoSchema, signupSchema } from "@/lib/validators";
+import { jeanSchema, measurementSchema, photoPatchSchema, photoSchema, passwordChangeSchema, signupSchema } from "@/lib/validators";
 
 describe("validators", () => {
   it("applies jean defaults", () => {
@@ -28,5 +28,17 @@ describe("validators", () => {
   it("only allows setting a photo as cover, not unsetting", () => {
     expect(photoPatchSchema.safeParse({ isCover: true }).success).toBe(true);
     expect(photoPatchSchema.safeParse({ isCover: false }).success).toBe(false);
+  });
+});
+
+describe("new passwords", () => {
+  it("rejects passwords bcrypt would truncate", () => {
+    expect(signupSchema.safeParse({ email: "a@b.co", password: "x".repeat(73) }).success).toBe(false);
+    expect(signupSchema.safeParse({ email: "a@b.co", password: "é".repeat(37) }).success).toBe(false);
+    expect(signupSchema.safeParse({ email: "a@b.co", password: "x".repeat(72) }).success).toBe(true);
+  });
+  it("applies the same rule when changing a password", () => {
+    const r = passwordChangeSchema.safeParse({ currentPassword: "old", newPassword: "x".repeat(73) });
+    expect(r.success).toBe(false);
   });
 });
