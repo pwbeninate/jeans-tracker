@@ -37,3 +37,6 @@ export async function rateLimit(key: string, limit: number, windowSec: number) {
 /** Vercel sets x-forwarded-for; the first entry is the client. */
 export const clientIp = (req: Request) =>
   req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+
+/** Shared per-user budget for create requests, so one account can't flood the database. */
+export const writeLimit = (userId: string) => rateLimit(`write:${userId}`, 600, 60 * 60);

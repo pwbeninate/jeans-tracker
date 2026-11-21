@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db, wearLogs } from "@/db";
 import { idParam, json, parseBody, requireUser, route, type IdCtx } from "@/lib/http";
+import { writeLimit } from "@/lib/rate-limit";
 import { ownedJean } from "@/lib/queries";
 import { wearSchema } from "@/lib/validators";
 
@@ -17,6 +18,7 @@ export const GET = route<IdCtx>(async (_req, ctx) => {
 
 export const POST = route<IdCtx>(async (req, ctx) => {
   const userId = await requireUser();
+  await writeLimit(userId);
   const jean = await ownedJean(userId, await idParam(ctx));
   const body = await parseBody(req, wearSchema);
   const [created] = await db

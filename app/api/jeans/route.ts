@@ -1,6 +1,8 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { count, desc, eq, inArray } from "drizzle-orm";
 import { db, jeans, photos, washLogs, wearLogs } from "@/db";
-import { json, parseBody, requireUser, route } from "@/lib/http";
+import { HttpError, json, parseBody, requireUser, route } from "@/lib/http";
+import { MAX_JEANS_PER_USER } from "@/lib/limits";
+import { writeLimit } from "@/lib/rate-limit";
 import { coverFor, numericize, statsFor } from "@/lib/derive";
 import { jeanSchema } from "@/lib/validators";
 
@@ -53,7 +55,10 @@ export const GET = route(async (req) => {
 
 export const POST = route(async (req) => {
   const userId = await requireUser();
+  await writeLimit(userId);
   const body = await parseBody(req, jeanSchema);
+  const [{ n }] = await db.select({ n: count() }).from(jeans).where(eq(jeans.userId, userId));
+  if (n >= MAX_JEANS_PER_USER) throw new HttpError(400, "Limit of pairs reached for this account");
   const [created] = await db
     .insert(jeans)
     .values({ ...toDb(body), userId })
